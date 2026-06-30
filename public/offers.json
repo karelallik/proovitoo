@@ -1,0 +1,14 @@
+[
+  { "reg": "123ABC", "insurer": "If",         "product": "mtpl",  "premium": 245,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "Salva",      "product": "mtpl",  "premium": 18,   "period": "month", "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "Ergo",       "product": "mtpl",  "premium": 199,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "PZU",        "product": "casco", "premium": 175,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "Gjensidige", "product": "mtpl",  "premium": null, "period": "year",  "currency": "EUR", "status": "error", "error": "timeout" },
+  { "reg": "123ABC", "insurer": "Seesam",     "product": "mtpl",  "premium": 210,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "LHV",        "product": "mtpl",  "premium": 199,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "123ABC", "insurer": "BTA",        "product": "mtpl",  "premium": 232,  "period": "year",  "currency": "EUR", "status": "ok" },
+
+  { "reg": "456DEF", "insurer": "If",         "product": "mtpl",  "premium": 280,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "456DEF", "insurer": "Ergo",       "product": "mtpl",  "premium": 265,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "456DEF", "insurer": "Seesam",     "product": "mtpl",  "premium": 299,  "period": "year",  "currency": "EUR", "status": "ok" }
+]
