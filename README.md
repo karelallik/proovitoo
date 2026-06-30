@@ -1,32 +1,87 @@
-# React + TypeScript + Vite
+# Liikluskindlustuse pakkumiste võrdlus
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Lihtne React + TypeScript rakendus, mis on valminud live-coding ülesande raames.
 
-Currently, two official plugins are available:
+## Kasutajalugu
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> Kasutajana tahan sisestada oma sõiduki registrinumbri ja näha liikluskindlustuse pakkumistest kõige odavamat, et saaksin kiiresti teada, milline kindlustus mulle kõige vähem maksab.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Ülesande kirjeldus
 
-## Expanding the Oxlint configuration
+Rakendus võimaldab kasutajal:
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- sisestada sõiduki registrinumbri;
+- laadida pakkumised failist `offers.json`;
+- leida kehtivate MTPL pakkumiste seast odavaim pakkumine;
+- kuvada:
+  - kindlustusseltsi;
+  - algse hinna;
+  - normaliseeritud aastahinna;
+  - võrreldud pakkumiste arvu.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+Rakendus käsitleb `offers.json` faili nagu päris API vastust ning arvestab vigaste või puudulike andmetega.
+
+---
+
+## Kasutatud tehnoloogiad
+
+- React
+- TypeScript
+- Vite
+
+---
+
+## Käivitamine
+
+Paigalda sõltuvused:
+
+```bash
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Käivita arenduskeskkond:
+
+```bash
+npm run dev
+```
+
+Ehita tootmisversioon:
+
+```bash
+npm run build
+```
+
+Käivita lint:
+
+```bash
+npm run lint
+```
+
+---
+
+## Tehtud otsused
+
+Lahenduse koostamisel lähtusin põhimõttest, et äriloogika ja kasutajaliides oleksid eraldatud.
+
+- `App.tsx` vastutab kasutajaliidese eest.
+- `offers.ts` sisaldab kogu äriloogikat (andmete valideerimine, normaliseerimine ja odavaima pakkumise leidmine).
+
+Registrinumbrid normaliseeritakse (tühikud, sidekriipsud ja suur-/väiketähed), et kasutaja saaks neid sisestada erineval kujul.
+
+Pakkumiste võrdlemisel:
+
+- arvestatakse ainult `MTPL` pakkumisi;
+- arvestatakse ainult `status = ok` pakkumisi;
+- vigased või puudulikud kirjed jäetakse vahele;
+- kuupõhised hinnad teisendatakse aastahinnaks, et hinnad oleksid võrreldavad.
+
+---
+
+## Näidisregistrid
+
+Rakendust saab testida järgmiste registrinumbritega:
+
+- `123ABC`
+- `456DEF`
