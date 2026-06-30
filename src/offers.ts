@@ -35,6 +35,10 @@ function isOfferPeriod(period: unknown): period is OfferPeriod {
   return period === 'year' || period === 'month'
 }
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 export function normalizeRegistration(registration: string): string {
   return registration.trim().replace(/[\s-]+/g, '').toUpperCase()
 }
@@ -67,7 +71,11 @@ export function normalizeToYearlyEur(
   return null
 }
 
-export function toValidMtplOffer(rawOffer: RawOffer): ValidMtplOffer | null {
+export function toValidMtplOffer(rawOffer: unknown): ValidMtplOffer | null {
+  if (!isRecord(rawOffer)) {
+    return null
+  }
+
   if (
     typeof rawOffer.reg !== 'string' ||
     typeof rawOffer.insurer !== 'string' ||
@@ -116,7 +124,7 @@ export function findCheapestMtplOffer(
 
   const normalizedRegistration = normalizeRegistration(registration)
   const validOffers = offers
-    .map((offer) => toValidMtplOffer(offer as RawOffer))
+    .map((offer) => toValidMtplOffer(offer))
     .filter((offer): offer is ValidMtplOffer => {
       return offer !== null && offer.reg === normalizedRegistration
     })

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import {
   findCheapestMtplOffer,
+  isRecord,
   normalizeRegistration,
   type CheapestOfferResult,
-  type RawOffer,
 } from './offers'
 
 type SearchState =
@@ -41,8 +41,9 @@ function hasRegistrationMatch(offers: unknown, registration: string): boolean {
 
   const normalizedRegistration = normalizeRegistration(registration)
 
-  return offers.some((offer: RawOffer) => {
+  return offers.some((offer) => {
     return (
+      isRecord(offer) &&
       typeof offer.reg === 'string' &&
       normalizeRegistration(offer.reg) === normalizedRegistration
     )
