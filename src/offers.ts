@@ -22,8 +22,8 @@ export type ValidMtplOffer = {
   yearlyPremiumEur: number
 }
 
-export type CheapestOfferResult = {
-  offer: ValidMtplOffer | null
+export type TopOffersResult = {
+  offers: ValidMtplOffer[]
   comparedCount: number
 }
 
@@ -114,12 +114,12 @@ export function toValidMtplOffer(rawOffer: unknown): ValidMtplOffer | null {
   }
 }
 
-export function findCheapestMtplOffer(
+export function getValidMtplOffersForRegistration(
   offers: unknown,
   registration: string,
-): CheapestOfferResult {
+): ValidMtplOffer[] {
   if (!Array.isArray(offers)) {
-    return { offer: null, comparedCount: 0 }
+    return []
   }
 
   const normalizedRegistration = normalizeRegistration(registration)
@@ -129,19 +129,18 @@ export function findCheapestMtplOffer(
       return offer !== null && offer.reg === normalizedRegistration
     })
 
-  const cheapestOffer = validOffers.reduce<ValidMtplOffer | null>(
-    (cheapest, offer) => {
-      if (cheapest === null || offer.yearlyPremiumEur < cheapest.yearlyPremiumEur) {
-        return offer
-      }
+  return validOffers.sort((a, b) => a.yearlyPremiumEur - b.yearlyPremiumEur)
+}
 
-      return cheapest
-    },
-    null,
-  )
+export function findTopMtplOffers(
+  offers: unknown,
+  registration: string,
+  count = 3,
+): TopOffersResult {
+  const validOffers = getValidMtplOffersForRegistration(offers, registration)
 
   return {
-    offer: cheapestOffer,
+    offers: validOffers.slice(0, count),
     comparedCount: validOffers.length,
   }
 }

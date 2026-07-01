@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import {
-  findCheapestMtplOffer,
+  findTopMtplOffers,
   isRecord,
   normalizeRegistration,
-  type CheapestOfferResult,
+  type TopOffersResult,
 } from './offers'
 
 type SearchState =
@@ -12,7 +12,7 @@ type SearchState =
   | { status: 'empty' }
   | { status: 'no-match' }
   | { status: 'no-valid-offers' }
-  | { status: 'success'; result: CheapestOfferResult }
+  | { status: 'success'; result: TopOffersResult }
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat('et-EE', {
@@ -54,6 +54,7 @@ function App() {
   const [offers, setOffers] = useState<unknown>([])
   const [registration, setRegistration] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchState, setSearchState] = useState<SearchState>({ status: 'idle' })
 
@@ -90,28 +91,31 @@ function App() {
       return
     }
 
-    const result = findCheapestMtplOffer(offers, registration)
+    setIsSearching(true)
 
-    if (result.offer === null) {
-      setSearchState({ status: 'no-valid-offers' })
-      return
-    }
+    setTimeout(() => {
+      const result = findTopMtplOffers(offers, registration)
 
-    setSearchState({ status: 'success', result })
+      if (result.offers.length === 0) {
+        setSearchState({ status: 'no-valid-offers' })
+        setIsSearching(false)
+        return
+      }
+
+      setSearchState({ status: 'success', result })
+      setIsSearching(false)
+    }, 500)
   }
-
-  const cheapestOffer =
-    searchState.status === 'success' ? searchState.result.offer : null
 
   return (
     <main className="page">
       <section className="calculator" aria-labelledby="page-title">
         <div className="intro">
           <p className="eyebrow">Liikluskindlustuse vordlus</p>
-          <h1 id="page-title">Leia odavaim MTPL pakkumine</h1>
+          <h1 id="page-title">Leia 3 odavaimat MTPL pakkumist</h1>
           <p>
-            Sisesta registrinumber ja vaatame mock-andmetest odavaima sobiva
-            pakkumise.
+            Sisesta registrinumber ja vaatame mock-andmetest kuni kolm
+            odavaimat sobivat pakkumist.
           </p>
         </div>
 
@@ -127,14 +131,16 @@ function App() {
               placeholder="Naiteks 123ABC"
               autoComplete="off"
             />
-            <button type="submit" disabled={isLoading}>
-              Leia odavaim pakkumine
+            <button type="submit" disabled={isLoading || isSearching}>
+              Leia odavaimad pakkumised
             </button>
           </div>
         </form>
 
         <section className="result" aria-live="polite">
           {isLoading && <p>Laen pakkumisi...</p>}
+
+          {isSearching && <p>Otsin pakkumisi...</p>}
 
           {loadError !== null && <p className="message error">{loadError}</p>}
 
@@ -158,30 +164,47 @@ function App() {
             </p>
           )}
 
-          {cheapestOffer !== null && searchState.status === 'success' && (
-            <div className="offer">
-              <div>
-                <p className="label">Kindlustaja</p>
-                <p className="value">{cheapestOffer.insurer}</p>
+          {searchState.status === 'success' && (
+            <>
+              <div className="offer-list">
+                {searchState.result.offers.map((offer, index) => (
+                  <div
+                    key={`${offer.insurer}-${index}`}
+                    className={
+                      index === 0 ? 'offer offer--cheapest' : 'offer'
+                    }
+                  >
+                    {index === 0 && (
+                      <p className="offer-badge">Soodsaim</p>
+                    )}
+                    <div>
+                      <p className="label">Kindlustaja</p>
+                      <p className="value">{offer.insurer}</p>
+                    </div>
+                    <div>
+                      <p className="label">Maksesagedus</p>
+                      <p className="value">{formatPeriod(offer.period)}</p>
+                    </div>
+                    <div>
+                      <p className="label">Algne hind</p>
+                      <p className="value">
+                        {formatMoney(offer.premium)} /{' '}
+                        {formatPeriod(offer.period)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="label">Aastahind</p>
+                      <p className="value">
+                        {formatMoney(offer.yearlyPremiumEur)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="label">Algne hind</p>
-                <p className="value">
-                  {formatMoney(cheapestOffer.premium)} /{' '}
-                  {formatPeriod(cheapestOffer.period)}
-                </p>
-              </div>
-              <div>
-                <p className="label">Aastahind</p>
-                <p className="value">
-                  {formatMoney(cheapestOffer.yearlyPremiumEur)}
-                </p>
-              </div>
-              <div>
-                <p className="label">Vorreldud pakkumisi</p>
-                <p className="value">{searchState.result.comparedCount}</p>
-              </div>
-            </div>
+              <p className="message">
+                Vorreldud pakkumisi: {searchState.result.comparedCount}
+              </p>
+            </>
           )}
         </section>
       </section>

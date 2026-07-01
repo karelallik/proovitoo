@@ -10,5 +10,6 @@
 
   { "reg": "456DEF", "insurer": "If",         "product": "mtpl",  "premium": 280,  "period": "year",  "currency": "EUR", "status": "ok" },
   { "reg": "456DEF", "insurer": "Ergo",       "product": "mtpl",  "premium": 265,  "period": "year",  "currency": "EUR", "status": "ok" },
-  { "reg": "456DEF", "insurer": "Seesam",     "product": "mtpl",  "premium": 299,  "period": "year",  "currency": "EUR", "status": "ok" }
+  { "reg": "456DEF", "insurer": "Seesam",     "product": "mtpl",  "premium": 299,  "period": "year",  "currency": "EUR", "status": "ok" },
+  { "reg": "456DEF", "insurer": "LHV",        "product": "mtpl",  "premium": 21,   "period": "month", "currency": "EUR", "status": "ok" }
 ]
