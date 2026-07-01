@@ -5,11 +5,23 @@ A small React + TypeScript + Vite app that compares mock motor insurance
 shows the three cheapest valid MTPL offers, normalized to a yearly price so
 they're directly comparable.
 
-The project started as a live-coding assignment and has since grown a
-small `.claude/` workflow (agents, skills, and research notes) documenting
-how it evolved, including a research pass on a real insurance comparison
-site.
+The project started as a live-coding assignment and was later extended using Claude Code. The repository now includes a small `.claude/` workflow (agents, skills, and research notes) documenting the development process, API investigation and design decisions.
 
+---
+
+## Development process
+
+The repository contains two stages of the exercise:
+
+- `main` contains the original live-coding solution.
+- `branch-claude` extends the project using Claude Code by adding:
+  - Claude harness files (`CLAUDE.md`, agents, skills)
+  - API research
+  - UI improvements
+  - additional testing
+  - documentation
+  - the experimental `offerService` abstraction
+ 
 ---
 
 ## Original assignment
