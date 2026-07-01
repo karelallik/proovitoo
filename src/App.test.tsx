@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 const mockOffers = [
   { reg: '123ABC', insurer: 'If', product: 'mtpl', premium: 245, period: 'year', currency: 'EUR', status: 'ok' },
+  { reg: '123ABC', insurer: 'LHV', product: 'mtpl', premium: 30, period: 'month', currency: 'EUR', status: 'ok' },
 ]
 
 beforeEach(() => {
@@ -38,5 +39,22 @@ describe('App', () => {
     screen.getByRole('button', { name: /Leia odavaimad pakkumised/i }).click()
 
     expect(await screen.findByText(/Palun sisesta registrinumber/i)).toBeTruthy()
+  })
+
+  it('renders offer cards for a matching registration', async () => {
+    render(<App />)
+
+    await screen.findByText(/Proovi registrinumbreid/i)
+
+    fireEvent.change(screen.getByLabelText(/registrinumber/i), {
+      target: { value: '123ABC' },
+    })
+    screen.getByRole('button', { name: /Leia odavaimad pakkumised/i }).click()
+
+    const cards = await screen.findAllByRole('listitem')
+    expect(cards).toHaveLength(2)
+    expect(screen.getByText('LHV')).toBeTruthy()
+    expect(screen.getByText('If')).toBeTruthy()
+    expect(screen.getByText('Soodsaim')).toBeTruthy()
   })
 })

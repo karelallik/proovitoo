@@ -130,8 +130,8 @@ This repo includes a small `.claude/` setup used while developing it:
   protected-endpoint use before a change is considered done).
 - `.claude/skills/mtpl-testing.md` — a reusable testing checklist for this
   app (business logic cases, malformed-data cases, manual UI checklist).
-- Every implementation change goes through a reviewer pass before being
-  considered complete.
+- Non-trivial changes (like the API research and the offer-service
+  abstraction) go through a reviewer pass before being considered complete.
 
 ---
 
