@@ -14,6 +14,12 @@ already masks owner PII with `"***"` server-side.
 Status legend: 🟢 documented · 🟡 partially observed · 🔴 protected/session-required
 
 Investigated: 2026-07-01, via live Chrome session (Claude in Chrome MCP tools).
+Follow-up: 2026-07-01 (same day), second session focused specifically on
+`POST /offers`, using the Chrome extension's live network-request reader
+(`read_network_requests`) with the tab kept open across multiple manual
+reads (closest equivalent available to a DevTools "Preserve Log" session in
+this tool environment — see caveat in the `POST /offers` section below on
+what this tool can and cannot surface).
 
 ---
 
@@ -104,27 +110,81 @@ All endpoints below are under base URL `https://shop-api.kindlustusest.ee/v1`.
   understand quote creation** (see `POST /offers` below, not yet fully
   observed). Do not implement yet — see open questions.
 
-### 🟡 `POST /offers` — create a quote (inferred, not directly captured)
+### 🟡 `POST /offers` — create a quote (endpoint/trigger confirmed; body/response still not captured)
 
-- **Method / URL**: `POST https://shop-api.kindlustusest.ee/v1/offers`
-  (seen only via `performance.getEntriesByType('resource')` as an
-  `xmlhttprequest` call; exact request body and response were **not**
-  captured — the passive network-request tool in this session only
-  reliably surfaced CORS `OPTIONS` preflights, not the real request/response
-  bodies, for same-origin-timed XHRs fired during page navigation).
-- **What it appears to do**: given the submitted `licenseplate` (and
-  implicitly `service=mtpl`), creates a new quote resource server-side and
-  returns (or the frontend otherwise obtains) the `guid` used in the
-  `/pakkumine?...&id={guid}` redirect and in `GET /offers/{guid}` above.
-- **Auth / session required**: unknown — likely relies on the
-  `XSRF-TOKEN` cookie (see Sanctum note below) since it's a mutating POST.
-- **Classification**: 🟡 **unclear — likely session/CSRF-protected.** Do
-  not assume it's safely callable from arbitrary app code without further
+- **Method / URL**: `POST https://shop-api.kindlustusest.ee/v1/offers` —
+  **directly confirmed** this session as a real in-flight request (method
+  `POST`, seen mid-flight with `statusCode: pending`), not merely inferred
+  from `performance.getEntriesByType('resource')` timing entries as before.
+- **Trigger condition (new finding)**: this call is **not** exclusive to
+  clicking "Edasi" on the landing-page form. Navigating directly to
+  `https://uus.kindlustusest.ee/pakkumine?service=mtpl&step=liiklus1&licenseplate={PLATE}`
+  (i.e. the `pakkumine` page itself, with a `licenseplate` query param but
+  **no** `id`) is sufficient to trigger it. The page detects the missing
+  `id`, fires `POST /offers` (in parallel with `POST /vehicle/details`,
+  `GET /options/mtpl`, `GET /flags`, `GET /user`, `GET /carts/{guid}`, and
+  `GET /sanctum/csrf-cookie` — all fired together as a bootstrap batch, not
+  a strict waterfall gated on `/offers` finishing first), then performs a
+  **client-side (History API) redirect** to append `&id={newGuid}` to the
+  URL once the new quote is created, landing on the same `pakkumine` page
+  now fully populated with offers (verified visually: 7 insurers' MTPL
+  quotes rendered, e.g. BTA/If/Seesam/ERGO/Salva/Balcia/PZU).
+- **Non-idempotent / creates a new resource every call**: repeating this
+  navigation (3 manual runs this session) produced **three different**
+  fresh `guid`s each time for the same placeholder plate `123ABC` — the
+  endpoint does not dedupe/reuse an existing quote for the same plate, it
+  mints a new quote resource on every call.
+- **Request payload shape**: **still not captured.** See tooling caveat
+  below.
+- **Response shape**: **still not captured directly**, but strongly
+  believed to be the same object documented under `GET /offers/{guid}`
+  above (or a subset of it) — the redirect target's `id` is exactly the
+  `guid` used to fetch that full object, and the rendered page content
+  (vehicle details, 7 insurers, per-package prices) matches that
+  endpoint's documented shape exactly. Not verified byte-for-byte against
+  the POST response itself.
+- **Auth / session required**: still not directly confirmed at the header
+  level (see tooling caveat). Circumstantial evidence it participates in
+  the same session/cookie context as everything else on the page:
+  `GET /sanctum/csrf-cookie` and `GET /user` are fetched in the same
+  bootstrap batch as `POST /offers`, and a `carts/{guid}` (tied to the
+  `lastCartId` cookie) already exists before `/offers` is even called. This
+  is consistent with, but does not prove, a CSRF-cookie requirement on the
+  POST itself.
+- **Tooling caveat (why body/response still isn't captured)**: this
+  follow-up session used the Chrome extension's `read_network_requests`
+  tool as the closest available equivalent to a DevTools Network panel.
+  Two separate limitations were confirmed, not just one:
+  1. **The tool only ever surfaces `url`, `method`, and `statusCode`** for
+     any request (confirmed across POST, GET, and OPTIONS entries this
+     session) — it does not expose request/response headers or bodies at
+     all, regardless of timing. This is a capability gap in the tool
+     itself, not a race condition.
+  2. **The SPA's client-side redirect clears the tool's tracked-request
+     buffer** before a second read can occur — the redirect from the
+     id-less URL to the id-bearing URL happens fast enough (sub-second)
+     that by the time a follow-up read is issued, only a leftover CORS
+     `OPTIONS 204` preflight for the *next* call (`GET /offers/{guid}`)
+     remains visible; the `POST /offers` entry itself is already gone.
+     This reproduced identically across all 3 manual attempts this
+     session.
+  Neither limitation is a sign of anti-bot protection — both are
+  characteristics of the observation tool available in this environment.
+  A real DevTools Network panel with "Preserve Log" (not available as a
+  direct tool call in this session) or a MITM proxy would very likely
+  resolve both issues and should be used for a future follow-up if the
+  exact body/response schema is still needed.
+- **Classification**: 🟡 **partially observed** (upgraded from the prior
+  session's "inferred, not directly captured"). Endpoint, method, and
+  trigger conditions are now directly confirmed; exact request/response
+  body schema and header requirements (in particular, whether it fails
+  without an `X-XSRF-TOKEN` header) are still unconfirmed. Given it's a
+  mutating POST living behind a Laravel Sanctum CSRF setup on the same
+  domain, treat it as **likely session/CSRF-protected** until proven
+  otherwise — do not wire it into third-party app code without further
   observation.
-- **Open TODO**: re-observe this call with a proper request-capturing
-  method (e.g. real browser DevTools Network panel with "preserve log", or
-  a MITM proxy) rather than this session's tooling, which could not
-  reliably capture in-flight POST bodies/responses.
+- **No CAPTCHA or rate limiting** was encountered across the 3 manual
+  quote-creation calls made this session.
 
 ### 🟡 `GET/POST /vehicle/details` — vehicle lookup by plate (inferred)
 
@@ -215,9 +275,16 @@ based, not token based.
 ## Open questions
 
 - What exactly does `POST /offers` (and possibly `POST /vehicle/details`)
-  require as a request body, and does it need the Sanctum CSRF header? This
-  is the missing piece for understanding "how do you legitimately obtain a
-  `{guid}}` to feed into `GET /offers/{guid}`".
+  require as a request body, and does it need the Sanctum CSRF header?
+  **Trigger conditions and endpoint are now confirmed** (see `POST /offers`
+  section above — navigating to `/pakkumine?service=mtpl&licenseplate=...`
+  with no `id` is enough to fire it and get a new quote `guid` back via
+  redirect), but the **exact field-level request/response body is still
+  unconfirmed** — the Chrome-extension network tool available in this
+  environment only exposes `url`/`method`/`statusCode`, never
+  headers/bodies, and the SPA's client-side redirect clears its buffer
+  before a completed response can be inspected. A real DevTools Network
+  panel or MITM proxy session is still needed to close this out fully.
 - Does `GET /offers/{guid}` remain reachable indefinitely, or does it expire
   (note `metadata.offer_valid_until` in the response — suggests quotes are
   time-limited)?
@@ -226,11 +293,16 @@ based, not token based.
   impractical regardless — not tested, not attempted.)
 - What does the CASCO (Kaskokindlustus) flow look like — same API shape
   under a different `service` value, or a different endpoint entirely?
-- The passive network-capture tool available in this session did not
-  reliably show real request/response bodies for XHRs fired around
-  navigation events (only CORS preflights). A follow-up session with actual
-  browser DevTools (Network tab, "Preserve log") or a proxy would be needed
-  to fully confirm the `POST /offers` contract.
+- The network-capture tooling available across both sessions (passive
+  `performance` timing entries, and this follow-up's live
+  `read_network_requests` extension tool) has **never** surfaced real
+  request/response bodies or headers — only `url`/`method`/`statusCode`.
+  Additionally, the SPA's own client-side redirect (id-less URL → id-bearing
+  URL) clears the live tool's buffer before a completed `POST /offers` can
+  be re-read. A follow-up session with actual browser DevTools (Network
+  tab, "Preserve log", which persists across client-side navigations) or a
+  MITM proxy is still needed to fully confirm the `POST /offers` request
+  body and response body contract.
 
 ## Recommendation for implementation phase (not yet actioned)
 

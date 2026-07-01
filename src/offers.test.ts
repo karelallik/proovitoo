@@ -5,6 +5,7 @@ import {
   getValidMtplOffersForRegistration,
   normalizeRegistration,
   normalizeToYearlyEur,
+  parsePremium,
   toValidMtplOffer,
 } from './offers'
 
@@ -63,6 +64,52 @@ describe('getValidMtplOffersForRegistration', () => {
 
     expect(result.map((offer) => offer.insurer)).toEqual(['Cheap', 'Middle', 'Expensive'])
   })
+
+  it('ignores malformed entries mixed into an otherwise-valid array', () => {
+    const raw = [
+      null,
+      'oops',
+      42,
+      true,
+      { reg: '123ABC', insurer: 'If', product: 'mtpl', premium: 245, period: 'year', currency: 'EUR', status: 'ok' },
+    ]
+
+    const result = getValidMtplOffersForRegistration(raw, '123ABC')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].insurer).toBe('If')
+  })
+
+  it('matches whitespace/hyphen registration query variants to the same records', () => {
+    const raw = [
+      { reg: '123ABC', insurer: 'If', product: 'mtpl', premium: 245, period: 'year', currency: 'EUR', status: 'ok' },
+    ]
+
+    const variants = ['123ABC', '123 ABC', '123-abc', ' 123ABC ', '123-ABC ']
+
+    for (const variant of variants) {
+      expect(getValidMtplOffersForRegistration(raw, variant)).toHaveLength(1)
+    }
+  })
+})
+
+describe('parsePremium', () => {
+  it('parses comma-decimal strings as EUR decimals', () => {
+    expect(parsePremium('199,50')).toBe(199.5)
+  })
+
+  it('rejects negative premiums, whether numeric or string', () => {
+    expect(parsePremium(-50)).toBeNull()
+    expect(parsePremium('-50')).toBeNull()
+  })
+
+  it('rejects NaN and Infinity, whether numeric or string', () => {
+    expect(parsePremium(NaN)).toBeNull()
+    expect(parsePremium(Infinity)).toBeNull()
+    expect(parsePremium(-Infinity)).toBeNull()
+    expect(parsePremium('NaN')).toBeNull()
+    expect(parsePremium('Infinity')).toBeNull()
+  })
 })
 
 describe('normalizeToYearlyEur', () => {
@@ -107,6 +154,58 @@ describe('toValidMtplOffer', () => {
     expect(toValidMtplOffer(null)).toBeNull()
     expect(toValidMtplOffer('123ABC')).toBeNull()
   })
+
+  it('rejects unsupported currencies', () => {
+    const offer = toValidMtplOffer({
+      reg: '123ABC',
+      insurer: 'If',
+      product: 'mtpl',
+      premium: 245,
+      period: 'year',
+      currency: 'USD',
+      status: 'ok',
+    })
+
+    expect(offer).toBeNull()
+  })
+
+  it('rejects mismatched-case product/status/currency (strict matching is intentional)', () => {
+    expect(
+      toValidMtplOffer({
+        reg: '123ABC',
+        insurer: 'If',
+        product: 'MTPL',
+        premium: 245,
+        period: 'year',
+        currency: 'EUR',
+        status: 'ok',
+      }),
+    ).toBeNull()
+
+    expect(
+      toValidMtplOffer({
+        reg: '123ABC',
+        insurer: 'If',
+        product: 'mtpl',
+        premium: 245,
+        period: 'year',
+        currency: 'EUR',
+        status: 'OK',
+      }),
+    ).toBeNull()
+
+    expect(
+      toValidMtplOffer({
+        reg: '123ABC',
+        insurer: 'If',
+        product: 'mtpl',
+        premium: 245,
+        period: 'year',
+        currency: 'eur',
+        status: 'ok',
+      }),
+    ).toBeNull()
+  })
 })
 
 describe('findTopMtplOffers', () => {
@@ -132,6 +231,30 @@ describe('findTopMtplOffers', () => {
 
     expect(findTopMtplOffers(raw, '123ABC', 1).offers.map((offer) => offer.insurer)).toEqual(['B'])
     expect(findTopMtplOffers(raw, '123ABC', 5).offers).toHaveLength(2)
+  })
+
+  it('returns all valid offers, unpadded, when count exceeds the number available', () => {
+    const raw = [
+      { reg: '123ABC', insurer: 'A', product: 'mtpl', premium: 200, period: 'year', currency: 'EUR', status: 'ok' },
+      { reg: '123ABC', insurer: 'B', product: 'mtpl', premium: 100, period: 'year', currency: 'EUR', status: 'ok' },
+    ]
+
+    const result = findTopMtplOffers(raw, '123ABC', 10)
+
+    expect(result.offers).toHaveLength(2)
+    expect(result.comparedCount).toBe(2)
+  })
+
+  it('preserves original relative order for tied yearly premiums (stable sort)', () => {
+    const raw = [
+      { reg: '123ABC', insurer: 'First', product: 'mtpl', premium: 199, period: 'year', currency: 'EUR', status: 'ok' },
+      { reg: '123ABC', insurer: 'Second', product: 'mtpl', premium: 199, period: 'year', currency: 'EUR', status: 'ok' },
+      { reg: '123ABC', insurer: 'Third', product: 'mtpl', premium: 199, period: 'year', currency: 'EUR', status: 'ok' },
+    ]
+
+    const result = findTopMtplOffers(raw, '123ABC')
+
+    expect(result.offers.map((offer) => offer.insurer)).toEqual(['First', 'Second', 'Third'])
   })
 
   it('returns no offers for an empty or unknown registration', () => {
