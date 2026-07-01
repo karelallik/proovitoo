@@ -6,6 +6,7 @@ import {
   normalizeRegistration,
   type TopOffersResult,
 } from './offers'
+import { loadOffers } from './offerService'
 
 type SearchState =
   | { status: 'idle' }
@@ -34,6 +35,39 @@ function formatPeriod(period: string): string {
   return period
 }
 
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z"
+      />
+    </svg>
+  )
+}
+
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M18 4h3v2a4 4 0 0 1-4 4h-.29A6 6 0 0 1 13 13.94V17h3v2H8v-2h3v-3.06A6 6 0 0 1 7.29 10H7a4 4 0 0 1-4-4V4h3V2h12v2Zm-12 2H5a2 2 0 0 0 2 2V6Zm12 0v2a2 2 0 0 0 2-2h-2Z"
+      />
+    </svg>
+  )
+}
+
+function InfoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2Zm0-8h-2V7h2Z"
+      />
+    </svg>
+  )
+}
+
 function hasRegistrationMatch(offers: unknown, registration: string): boolean {
   if (!Array.isArray(offers)) {
     return false
@@ -59,15 +93,9 @@ function App() {
   const [searchState, setSearchState] = useState<SearchState>({ status: 'idle' })
 
   useEffect(() => {
-    async function loadOffers() {
+    async function load() {
       try {
-        const response = await fetch('/offers.json')
-
-        if (!response.ok) {
-          throw new Error('Pakkumiste laadimine ebaonnestus.')
-        }
-
-        setOffers(await response.json())
+        setOffers(await loadOffers())
       } catch {
         setLoadError('Pakkumiste laadimine ebaonnestus. Proovi hiljem uuesti.')
       } finally {
@@ -75,7 +103,7 @@ function App() {
       }
     }
 
-    loadOffers()
+    load()
   }, [])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -166,42 +194,55 @@ function App() {
 
           {searchState.status === 'success' && (
             <>
-              <div className="offer-list">
+              <p className="results-heading">
+                <TrophyIcon />
+                Soodsaimad pakkumised
+              </p>
+              <ol className="offer-list">
                 {searchState.result.offers.map((offer, index) => (
-                  <div
+                  <li
                     key={`${offer.insurer}-${index}`}
                     className={
-                      index === 0 ? 'offer offer--cheapest' : 'offer'
+                      index === 0 ? 'offer-card offer-card--top' : 'offer-card'
                     }
+                    data-rank={index + 1}
                   >
                     {index === 0 && (
                       <p className="offer-badge">Soodsaim</p>
                     )}
-                    <div>
-                      <p className="label">Kindlustaja</p>
-                      <p className="value">{offer.insurer}</p>
+                    <div className="offer-card__header">
+                      <span className="offer-card__icon">
+                        <ShieldIcon />
+                      </span>
+                      <p className="offer-card__insurer">{offer.insurer}</p>
+                      <span className="offer-card__rank">{index + 1}. koht</span>
                     </div>
-                    <div>
-                      <p className="label">Maksesagedus</p>
-                      <p className="value">{formatPeriod(offer.period)}</p>
+                    <div className="offer-card__grid">
+                      <div>
+                        <p className="label">Algne hind</p>
+                        <p className="value">
+                          {formatMoney(offer.premium)} /{' '}
+                          {formatPeriod(offer.period)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="label">Maksesagedus</p>
+                        <p className="value value--sub">
+                          {formatPeriod(offer.period)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="label">Aastahind</p>
+                        <p className="value value--accent">
+                          {formatMoney(offer.yearlyPremiumEur)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="label">Algne hind</p>
-                      <p className="value">
-                        {formatMoney(offer.premium)} /{' '}
-                        {formatPeriod(offer.period)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="label">Aastahind</p>
-                      <p className="value">
-                        {formatMoney(offer.yearlyPremiumEur)}
-                      </p>
-                    </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
-              <p className="message">
+              </ol>
+              <p className="message message--meta">
+                <InfoIcon />
                 Vorreldud pakkumisi: {searchState.result.comparedCount}
               </p>
             </>

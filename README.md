@@ -95,6 +95,27 @@ including endpoint-by-endpoint classification (public/protected/unsafe),
 are documented in
 [`.claude/notes/website-api-notes.md`](.claude/notes/website-api-notes.md).
 
+### Experimental: real API integration (not implemented, on purpose)
+
+[`src/offerService.ts`](src/offerService.ts) adds a small `loadOffers()`
+data-source layer in front of the existing mock flow, behind an
+off-by-default `VITE_USE_REAL_OFFERS` env flag, with automatic fallback to
+`offers.json` on any error. Its `loadRealOffers()` is a stub that always
+throws instead of calling the real API.
+
+**Why**: `GET /v1/offers/{guid}` is public, but it only serves a `{guid}`
+that already exists. Minting one requires `POST /v1/offers`, which rides
+the same Sanctum session/CSRF bootstrap as `GET /sanctum/csrf-cookie` and
+`GET /user` — both already documented as protected. There is no safe,
+unauthenticated way to obtain a `{guid}` for an arbitrary user-entered
+registration number, so this project deliberately stops at documenting
+the contract rather than faking a live integration.
+
+**To remove this experiment entirely**: delete `src/offerService.ts` and
+`src/offerService.test.ts`, and in `src/App.tsx` replace the `loadOffers()`
+call in the load effect with the original inline
+`fetch('/offers.json')` logic. Nothing else references this layer.
+
 ---
 
 ## Claude Code workflow
